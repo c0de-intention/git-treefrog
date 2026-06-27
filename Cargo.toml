@@ -1,15 +1,24 @@
 [package]
-name = "git-flight-deck"
+name = "git-treefrog"
 version = "0.1.0"
 edition = "2024"
-description = "Manage your git worktrees from the flight deck."
-authors = ["user"]
+description = "A frog's eye view of your git worktrees built in Rust."
 build = "build.rs"
+license = "MIT"
+default-run = "gt"
 
+[[bin]]
+name = "git-treefrog"
+path = "src/main.rs"
+
+[[bin]]
+name = "gt"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.90"
 better-panic = "0.3.0"
 clap = { version = "4.5.20", features = [
     "derive",
@@ -24,6 +33,7 @@ config = "0.14.0"
 crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
 directories = "5.0.1"
 futures = "0.3.31"
+git2 = "0.21.0"
 human-panic = "2.0.2"
 json5 = "0.4.1"
 libc = "0.2.161"

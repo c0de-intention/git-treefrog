@@ -9,6 +9,9 @@ mod cli;
 mod components;
 mod config;
 mod errors;
+mod git_path;
+mod git_repo;
+mod git_worktree;
 mod logging;
 mod tui;
 

@@ -12,4 +12,8 @@ pub enum Action {
     ClearScreen,
     Error(String),
     Help,
+    WorktreeUpdate,
+    WorktreeOpenEditor(String),
+    WorktreeNext,
+    WorktreePrevious,
 }
