@@ -2,7 +2,7 @@
 name = "git-treefrog"
 version = "0.1.0"
 edition = "2024"
-description = "A frog's eye view of your git worktrees built in Rust."
+description = "Navigate your git worktrees with ease with this Rust tui."
 build = "build.rs"
 license = "MIT"
 default-run = "gt"
