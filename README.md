@@ -41,6 +41,10 @@ or
 gt
 ```
 
-- `Up` and `Down` arrows to select worktree in the repo.
+## Keymaps
+
+### Worktree selector
+
+- `Up` and `Down` or `j` and `k` arrows to select worktree in the repo.
 
 - `Enter` to open it in your favourite editor, it will respect `$EDITOR`.

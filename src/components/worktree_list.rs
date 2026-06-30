@@ -58,7 +58,13 @@ impl Component for WorktreeList {
             KeyCode::Up if self.table_state.selected().is_some() => {
                 Ok(Some(Action::WorktreePrevious))
             }
+            KeyCode::Char('k') if self.table_state.selected().is_some() => {
+                Ok(Some(Action::WorktreePrevious))
+            }
             KeyCode::Down if self.table_state.selected().is_some() => {
+                Ok(Some(Action::WorktreeNext))
+            }
+            KeyCode::Char('j') if self.table_state.selected().is_some() => {
                 Ok(Some(Action::WorktreeNext))
             }
             _ => Ok(None),
@@ -122,7 +128,7 @@ impl Component for WorktreeList {
                         top: 0,
                         bottom: 0,
                     })
-                    .title("Git Treefrog"),
+                    .title("Worktree selector"),
             )
             .header(header)
             .column_spacing(1)
