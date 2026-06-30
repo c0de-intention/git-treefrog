@@ -7,9 +7,9 @@ use crossterm::ExecutableCommand;
 use crossterm::event::{KeyCode, KeyEvent};
 use crossterm::terminal::{LeaveAlternateScreen, disable_raw_mode};
 use ratatui::Frame;
-use ratatui::layout::Rect;
-use ratatui::style::Style;
-use ratatui::widgets::{Block, List, ListState};
+use ratatui::layout::{Constraint, Rect};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Padding, Row, Table, TableState};
 use std::io::stdout;
 use std::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
@@ -18,8 +18,8 @@ use tokio::sync::mpsc::UnboundedSender;
 pub struct WorktreeList {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    list_items: Vec<GitWorktree>,
-    list_state: ListState,
+    table_items: Vec<GitWorktree>,
+    table_state: TableState,
 }
 
 impl WorktreeList {
@@ -48,17 +48,19 @@ impl Component for WorktreeList {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
         match key.code {
-            KeyCode::Enter if self.list_state.selected().is_some() => {
-                if let Some(current_path_index) = self.list_state.selected() {
-                    let path = &self.list_items[current_path_index];
+            KeyCode::Enter if self.table_state.selected().is_some() => {
+                if let Some(current_path_index) = self.table_state.selected() {
+                    let path = &self.table_items[current_path_index];
                     return Ok(Some(Action::WorktreeOpenEditor(path.path.to_string())));
                 }
                 color_eyre::eyre::bail!("expected to have selected path");
             }
-            KeyCode::Up if self.list_state.selected().is_some() => {
+            KeyCode::Up if self.table_state.selected().is_some() => {
                 Ok(Some(Action::WorktreePrevious))
             }
-            KeyCode::Down if self.list_state.selected().is_some() => Ok(Some(Action::WorktreeNext)),
+            KeyCode::Down if self.table_state.selected().is_some() => {
+                Ok(Some(Action::WorktreeNext))
+            }
             _ => Ok(None),
         }
     }
@@ -74,18 +76,18 @@ impl Component for WorktreeList {
             Action::WorktreeUpdate => {
                 let repo = GitRepo::new();
                 let worktrees = repo.get_worktrees().context("Unable to get worktrees")?;
-                if !&worktrees.is_empty() && self.list_state.selected().is_none() {
-                    self.list_state.select(Some(0))
+                if !&worktrees.is_empty() && self.table_state.selected().is_none() {
+                    self.table_state.select(Some(0))
                 }
                 for worktree in worktrees {
-                    self.list_items.push(worktree);
+                    self.table_items.push(worktree);
                 }
             }
             Action::WorktreePrevious => {
-                self.list_state.select_previous();
+                self.table_state.select_previous();
             }
             Action::WorktreeNext => {
-                self.list_state.select_next();
+                self.table_state.select_next();
             }
             Action::WorktreeOpenEditor(path) => {
                 self.run_editor(&path)?;
@@ -100,14 +102,36 @@ impl Component for WorktreeList {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
-        let items = self.list_items.iter().map(|item| item.branch.clone());
-        let list = List::new(items)
-            .block(Block::bordered().title("Git Treefrog"))
-            .highlight_style(Style::new().reversed())
-            .highlight_symbol(">>")
-            .repeat_highlight_symbol(true);
+        let header = Row::new(["Branch", "Path"])
+            .style(Style::new().bold())
+            .bottom_margin(1);
 
-        frame.render_stateful_widget(list, area, &mut self.list_state);
+        let rows: Vec<Row> = self
+            .table_items
+            .iter()
+            .map(|item| Row::new([item.branch.clone(), item.path.to_string()]))
+            .collect();
+
+        let widths = [Constraint::Percentage(20), Constraint::Percentage(80)];
+        let table = Table::new(rows, widths)
+            .block(
+                Block::bordered()
+                    .padding(Padding {
+                        left: 1,
+                        right: 1,
+                        top: 0,
+                        bottom: 0,
+                    })
+                    .title("Git Treefrog"),
+            )
+            .header(header)
+            .column_spacing(1)
+            .style(Color::White)
+            .row_highlight_style(Style::new().on_black().bold())
+            .column_highlight_style(Color::Gray)
+            .highlight_symbol("🐸 ");
+
+        frame.render_stateful_widget(table, area, &mut self.table_state);
         Ok(())
     }
 }
