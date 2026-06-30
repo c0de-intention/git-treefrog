@@ -30,11 +30,7 @@ impl GitRepo {
                     return None;
                 }
                 let branch = head.shorthand().ok()?;
-                Some(GitWorktree::new(
-                    name.to_string(),
-                    GitPath::new(path),
-                    branch.to_string(),
-                ))
+                Some(GitWorktree::new(GitPath::new(path), branch.to_string()))
             })
             .collect();
         Ok(worktrees)

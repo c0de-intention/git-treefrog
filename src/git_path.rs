@@ -1,10 +1,10 @@
-use std::path::{Display, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct GitPath(PathBuf);
 
-impl GitPath{
-    pub fn new(path_buf: PathBuf) -> Self{
+impl GitPath {
+    pub fn new(path_buf: PathBuf) -> Self {
         Self(path_buf)
     }
 }
