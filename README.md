@@ -1,6 +1,6 @@
 # git-treefrog
 
-[![CI](https://github.com//git-treefrog/workflows/CI/badge.svg)](https://github.com//git-treefrog/actions)
+[![CI](https://github.com/c0de-intention/git-treefrog/workflows/CI/badge.svg)](https://github.com/c0de-intention/git-treefrog/actions)
 
 ![banner](./banner.png)
 
