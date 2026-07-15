@@ -60,3 +60,6 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+[dev-dependencies]
+insta = { version = "1.48.0", features = ["redactions"] }

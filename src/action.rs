@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
@@ -12,7 +14,7 @@ pub enum Action {
     ClearScreen,
     Error(String),
     Help,
-    WorktreeUpdate,
+    WorktreeUpdate(Option<PathBuf>),
     WorktreeOpenEditor(String),
     WorktreeNext,
     WorktreePrevious,
