@@ -11,11 +11,13 @@ use ratatui::layout::{Constraint, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Padding, Row, Table, TableState};
 use std::io::stdout;
+use std::path::PathBuf;
 use std::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Default)]
 pub struct WorktreeList {
+    repo: GitRepo,
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     table_items: Vec<GitWorktree>,
@@ -23,14 +25,44 @@ pub struct WorktreeList {
 }
 
 impl WorktreeList {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(path: Option<PathBuf>) -> color_eyre::Result<Self> {
+        let repo = GitRepo::new(path);
+        let mut table_state = TableState::default();
+        let mut table_items = vec![];
+
+        let worktrees = repo.get_worktrees().context("Unable to get worktrees")?;
+        table_state.select(Some(0));
+        for worktree in worktrees {
+            table_items.push(worktree);
+        }
+        Ok(Self {
+            repo,
+            table_items,
+            table_state,
+            ..Default::default()
+        })
     }
 
     fn run_editor(&self, path: &str) -> color_eyre::Result<()> {
         stdout().execute(LeaveAlternateScreen)?;
         disable_raw_mode()?;
+        //TODO: should call EDITOR
         Command::new("zed").arg(path).status()?;
+        Ok(())
+    }
+
+    fn update_repos(&mut self, path: Option<PathBuf>) -> color_eyre::Result<()> {
+        let worktrees = self
+            .repo
+            .get_worktrees()
+            .context("Unable to get worktrees")?;
+        if !&worktrees.is_empty() && self.table_state.selected().is_none() {
+            self.table_state.select(Some(0))
+        }
+        for worktree in worktrees {
+            self.table_items.push(worktree);
+        }
+
         Ok(())
     }
 }
@@ -50,8 +82,8 @@ impl Component for WorktreeList {
         match key.code {
             KeyCode::Enter if self.table_state.selected().is_some() => {
                 if let Some(current_path_index) = self.table_state.selected() {
-                    let path = &self.table_items[current_path_index];
-                    return Ok(Some(Action::WorktreeOpenEditor(path.path.to_string())));
+                    let workspace = &self.table_items[current_path_index];
+                    return Ok(Some(Action::WorktreeOpenEditor(workspace.path.to_string())));
                 }
                 color_eyre::eyre::bail!("expected to have selected path");
             }
@@ -79,15 +111,8 @@ impl Component for WorktreeList {
             Action::Render => {
                 // add any logic here that should run on every render
             }
-            Action::WorktreeUpdate => {
-                let repo = GitRepo::new();
-                let worktrees = repo.get_worktrees().context("Unable to get worktrees")?;
-                if !&worktrees.is_empty() && self.table_state.selected().is_none() {
-                    self.table_state.select(Some(0))
-                }
-                for worktree in worktrees {
-                    self.table_items.push(worktree);
-                }
+            Action::WorktreeUpdate(path) => {
+                self.update_repos(path)?;
             }
             Action::WorktreePrevious => {
                 self.table_state.select_previous();
@@ -115,7 +140,7 @@ impl Component for WorktreeList {
         let rows: Vec<Row> = self
             .table_items
             .iter()
-            .map(|item| Row::new([item.branch.clone(), item.path.to_string()]))
+            .map(|item| Row::new([item.branch.clone(), item.path.get_short_path()]))
             .collect();
 
         let widths = [Constraint::Percentage(20), Constraint::Percentage(80)];
@@ -135,7 +160,7 @@ impl Component for WorktreeList {
             .style(Color::White)
             .row_highlight_style(Style::new().on_black().bold())
             .column_highlight_style(Color::Gray)
-            .highlight_symbol("🐸 ");
+            .highlight_symbol("> ");
 
         frame.render_stateful_widget(table, area, &mut self.table_state);
         Ok(())

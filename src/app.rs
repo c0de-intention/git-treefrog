@@ -1,6 +1,7 @@
 use crossterm::event::KeyEvent;
-use ratatui::prelude::Rect;
+use ratatui::{Frame, prelude::Rect};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
@@ -12,6 +13,7 @@ use crate::{
 };
 
 pub struct App {
+    path: Option<PathBuf>,
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
@@ -31,12 +33,32 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> color_eyre::Result<Self> {
+    fn default() -> color_eyre::Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
+            path: None,
+            tick_rate: 4.0,
+            frame_rate: 60.0,
+            components: vec![Box::new(WorktreeList::new(None)?)],
+            should_quit: false,
+            should_suspend: false,
+            config: Config::default(),
+            mode: Mode::Home,
+            last_tick_key_events: Vec::new(),
+            action_tx,
+            action_rx,
+        })
+    }
+}
+
+impl App {
+    pub fn new(tick_rate: f64, frame_rate: f64, path: Option<PathBuf>) -> color_eyre::Result<Self> {
+        let (action_tx, action_rx) = mpsc::unbounded_channel();
+        Ok(Self {
+            path: path.clone(),
             tick_rate,
             frame_rate,
-            components: vec![Box::new(WorktreeList::new())],
+            components: vec![Box::new(WorktreeList::new(path)?)],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -66,7 +88,7 @@ impl App {
 
         let action_tx = self.action_tx.clone();
 
-        action_tx.send(Action::WorktreeUpdate)?;
+        action_tx.send(Action::WorktreeUpdate(self.path.clone()))?;
         loop {
             self.handle_events(&mut tui).await?;
             self.handle_actions(&mut tui)?;
@@ -163,15 +185,21 @@ impl App {
         Ok(())
     }
 
-    fn render(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
-        tui.draw(|frame| {
-            for component in self.components.iter_mut() {
-                if let Err(err) = component.draw(frame, frame.area()) {
-                    let _ = self
-                        .action_tx
-                        .send(Action::Error(format!("Failed to draw: {:?}", err)));
-                }
+    pub fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
+        for component in self.components.iter_mut() {
+            if let Err(err) = component.draw(frame, frame.area()) {
+                let _ = self
+                    .action_tx
+                    .send(Action::Error(format!("Failed to draw: {:?}", err)));
             }
+        }
+        Ok(())
+    }
+
+    pub fn render(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+        tui.draw(|frame| {
+            self.draw(frame, frame.area())
+                .expect("failed to draw to terminal")
         })?;
         Ok(())
     }

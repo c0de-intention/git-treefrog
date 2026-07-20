@@ -1,16 +1,24 @@
+use std::path::PathBuf;
+
 use git2::Repository;
 
 use crate::{git_path::GitPath, git_worktree::GitWorktree};
 
-#[derive(Debug)]
-pub struct GitRepo {}
+#[derive(Debug, Default)]
+pub struct GitRepo {
+    path: Option<PathBuf>,
+}
 
 impl GitRepo {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(path: Option<PathBuf>) -> Self {
+        Self { path }
     }
     fn get_repo(&self) -> Result<Repository, git2::Error> {
-        Repository::open_from_env()
+        if let Some(path) = &self.path {
+            Repository::open(path)
+        } else {
+            Repository::open_from_env()
+        }
     }
 
     pub fn get_worktrees(&self) -> Result<Vec<GitWorktree>, git2::Error> {
